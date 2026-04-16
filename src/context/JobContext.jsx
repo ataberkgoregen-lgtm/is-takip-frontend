@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 
-const API_URL = "http://localhost:5000/api/applications";
+const API_URL =
+  (import.meta.env.VITE_API_URL || "http://localhost:5000") +
+  "/api/applications";
 
 const JobContext = createContext();
 
@@ -19,18 +21,23 @@ function reducer(state, action) {
     case "SET_APPLICATIONS":
       return { ...state, applications: action.payload, loading: false };
     case "ADD_APPLICATION":
-      return { ...state, applications: [action.payload, ...state.applications] };
+      return {
+        ...state,
+        applications: [action.payload, ...state.applications],
+      };
     case "UPDATE_APPLICATION":
       return {
         ...state,
         applications: state.applications.map((app) =>
-          app.id === action.payload.id ? action.payload : app
+          app.id === action.payload.id ? action.payload : app,
         ),
       };
     case "DELETE_APPLICATION":
       return {
         ...state,
-        applications: state.applications.filter((app) => app.id !== action.payload),
+        applications: state.applications.filter(
+          (app) => app.id !== action.payload,
+        ),
       };
     default:
       return state;
@@ -86,7 +93,9 @@ export function JobProvider({ children }) {
   };
 
   return (
-    <JobContext.Provider value={{ ...state, addApplication, updateApplication, deleteApplication }}>
+    <JobContext.Provider
+      value={{ ...state, addApplication, updateApplication, deleteApplication }}
+    >
       {children}
     </JobContext.Provider>
   );
