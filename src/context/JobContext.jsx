@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { useAuth } from "./AuthContext";
 
-const API_URL =
-  (import.meta.env.VITE_API_URL || "http://localhost:5000") +
-  "/api/applications";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = `${BASE_URL}/api/applications`;
 
 const JobContext = createContext();
 
@@ -29,14 +29,14 @@ function reducer(state, action) {
       return {
         ...state,
         applications: state.applications.map((app) =>
-          app.id === action.payload.id ? action.payload : app,
+          app._id === action.payload._id ? action.payload : app,
         ),
       };
     case "DELETE_APPLICATION":
       return {
         ...state,
         applications: state.applications.filter(
-          (app) => app.id !== action.payload,
+          (app) => app._id !== action.payload,
         ),
       };
     default:
@@ -46,17 +46,26 @@ function reducer(state, action) {
 
 export function JobProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const { token } = useAuth();
+
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
 
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    if (token) fetchApplications();
+  }, [token]);
 
   const fetchApplications = async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URL, { headers: authHeaders });
       const data = await res.json();
-      dispatch({ type: "SET_APPLICATIONS", payload: data });
+      dispatch({
+        type: "SET_APPLICATIONS",
+        payload: Array.isArray(data) ? data : [],
+      });
     } catch {
       dispatch({ type: "SET_ERROR", payload: "Veriler yüklenemedi." });
     }
@@ -65,7 +74,7 @@ export function JobProvider({ children }) {
   const addApplication = async (formData) => {
     const res = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify(formData),
     });
     if (!res.ok) throw new Error("Başvuru eklenemedi.");
@@ -77,7 +86,7 @@ export function JobProvider({ children }) {
   const updateApplication = async (id, formData) => {
     const res = await fetch(`${API_URL}/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify(formData),
     });
     if (!res.ok) throw new Error("Güncelleme başarısız.");
@@ -87,7 +96,10 @@ export function JobProvider({ children }) {
   };
 
   const deleteApplication = async (id) => {
-    const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+      headers: authHeaders,
+    });
     if (!res.ok) throw new Error("Silme başarısız.");
     dispatch({ type: "DELETE_APPLICATION", payload: id });
   };
